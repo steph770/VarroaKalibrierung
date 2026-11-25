@@ -1,5 +1,5 @@
 // Service Worker: App-Dateien offline verfügbar halten (Daten kommen immer frisch)
-const CACHE = 'varroa-kalib-v3';
+const CACHE = 'varroa-kalib-v4';
 const SHELL = [
   './', 'index.html', 'config.js', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/core.js', 'js/ui.js', 'js/detect.js', 'js/model.js', 'js/exif.js', 'js/worker.js',

@@ -16,13 +16,16 @@ function remember(v) { try { localStorage.setItem('vk-last', JSON.stringify({ ..
 export async function uploadView(el) {
   const cam = h('input', { type: 'file', accept: 'image/jpeg,image/*', capture: 'environment', style: { display: 'none' } });
   const pick = h('input', { type: 'file', accept: 'image/jpeg,image/*', style: { display: 'none' } });
+  // ohne accept-Filter öffnet Android den normalen Dateimanager mit Ordnern statt der Fotoauswahl
+  const files = h('input', { type: 'file', style: { display: 'none' } });
   const body = h('div');
-  put(el, h('h1', {}, 'Windelfoto hochladen'), cam, pick,
+  put(el, h('h1', {}, 'Windelfoto hochladen'), cam, pick, files,
     h('div', { class: 'card' },
       h('p', {}, 'So wird das Foto gut: ganze Windel im Bild, senkrecht von oben, gleichmäßiges Licht ohne harte Schatten, höchste Auflösung der Kamera, JPEG-Format.'),
       h('div', { class: 'row gap wrap' },
         h('button', { class: 'btn primary', onclick: () => cam.click() }, '📷 Foto aufnehmen'),
-        h('button', { class: 'btn', onclick: () => pick.click() }, '🖼 Foto auswählen'))),
+        h('button', { class: 'btn', onclick: () => pick.click() }, '🖼 Aus Galerie'),
+        h('button', { class: 'btn', onclick: () => files.click() }, '📁 Aus Ordner'))),
     body);
   let cleanupFn = null;
   const onFile = async (file) => {
@@ -73,6 +76,11 @@ export async function uploadView(el) {
   };
   cam.onchange = () => onFile(cam.files[0]);
   pick.onchange = () => onFile(pick.files[0]);
+  files.onchange = () => {
+    const f = files.files[0];
+    if (f && !/\.(jpe?g)$/i.test(f.name) && !/jpeg/.test(f.type)) { toast('Bitte ein JPEG-Foto wählen (.jpg).', 'warn', 5000); return; }
+    onFile(f);
+  };
   return () => { if (cleanupFn) cleanupFn(); };
 }
 
