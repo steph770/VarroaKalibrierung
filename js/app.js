@@ -184,6 +184,9 @@ async function detailView(el, id) {
         ['Volk / Standort', [rec.colony, rec.site].filter(Boolean).join(' · ') || '–'],
         ['Einlage', `${fmtDateTime(rec.inserted_at)} bis ${fmtDateTime(rec.removed_at)}${days ? ` (${days.toFixed(1)} Tage)` : ''}`],
         ['Windel', rec.windel_w_mm ? `${rec.windel_w_mm} mm breit${rec.windel_l_mm ? ` × ${rec.windel_l_mm} mm lang` : ''}` : '–'],
+        ['Auflösung Foto', `${rec.width} × ${rec.height} px (${(rec.width * rec.height / 1e6).toFixed(1).replace('.', ',')} MP)`],
+        ['Auflösung Windelfläche', roiRes(rec)],
+        ['Prüfausschnitt', `7 × 7 mm = ${Math.round(7 * rec.px_per_mm)} × ${Math.round(7 * rec.px_per_mm)} px · eine Milbe ≈ ${Math.round(1.6 * rec.px_per_mm)} px breit`],
         ['Maßstab', `${(+rec.px_per_mm).toFixed(2)} px/mm${rec.scale_source ? ` (${rec.scale_source})` : ''}`],
         ['Kandidaten', rec.n_candidates ?? '–'],
         ['Schätzung der App', appCount === null ? '–' : `${appCount} Milben (Modell v${lm.id}, beim Hochladen aktuell)`],
@@ -217,6 +220,13 @@ async function detailView(el, id) {
     },
   });
   return () => { zv.destroy(); URL.revokeObjectURL(url); };
+}
+
+function roiRes(rec) {
+  if (!rec.roi || rec.roi.length !== 4) return '–';
+  const d = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+  const w = (d(rec.roi[0], rec.roi[1]) + d(rec.roi[3], rec.roi[2])) / 2, hh = (d(rec.roi[0], rec.roi[3]) + d(rec.roi[1], rec.roi[2])) / 2;
+  return `ca. ${Math.round(w)} × ${Math.round(hh)} px (${(w * hh / 1e6).toFixed(1).replace('.', ',')} MP)`;
 }
 
 function table(rows) {

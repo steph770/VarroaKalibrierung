@@ -175,7 +175,7 @@ export async function reviewView(el, id) {
     const causeRow = h('div', { class: 'row gap wrap causes', style: { display: 'none' } });
     const label = h('span', { class: 'card-state' });
     const box = h('div', { class: 'rcard' },
-      h('div', { class: 'rcard-head' }, h('span', {}, `#${num} · ${tag}`), label),
+      h('div', { class: 'rcard-head' }, h('span', {}, `#${num} · ${tag} · ${Math.round(field)} × ${Math.round(field)} px`), label),
       cnv,
       h('div', { class: 'row gap rcard-btns' }, bM, bK, bO, more),
       causeRow);

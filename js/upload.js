@@ -163,7 +163,7 @@ function imageForm(el, { img, url, W, H, init, seed, isNew, submitLabel, onSubmi
   const ppmNow = () => pxPerMmFromRoi(roi, +f.ww.value, +f.wl.value, dir.value);
   const updateInfo = () => {
     const p = ppmNow();
-    scaleInfo.textContent = p ? `Maßstab: ${p.toFixed(2)} Pixel pro mm (eine Milbe ≈ ${(1.6 * p).toFixed(0)} Pixel breit)` : 'Maßstab: bitte die Windelbreite eintragen';
+    scaleInfo.textContent = `Foto: ${W} × ${H} px (${(W * H / 1e6).toFixed(1).replace('.', ',')} MP) · ` + (p ? `Maßstab: ${p.toFixed(2)} Pixel pro mm (eine Milbe ≈ ${(1.6 * p).toFixed(0)} Pixel breit)` : 'Maßstab: bitte die Windelbreite eintragen');
     scaleInfo.className = 'scaleinfo ' + (p && p >= 3 ? 'ok' : 'warn');
     const d = f.ins.value && f.rem.value ? (new Date(f.rem.value) - new Date(f.ins.value)) / 864e5 : null;
     days.textContent = d ? `= ${d.toFixed(1)} Tage eingelegt` : '';
