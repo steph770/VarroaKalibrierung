@@ -43,7 +43,7 @@ Codes später ändern: im SQL Editor
 ## 4. So läuft ein Run
 
 1. **Hochladen:** Die App schätzt sofort mit dem aktuellen Modell, wie viele Milben auf der Windel liegen.
-2. **Kacheln prüfen:** Die App zeigt Ausschnitte (5 × 5 mm), sortiert nach ihrer **Konfidenz** (wie sicher sie ist, dass dort eine Milbe liegt). Markiere nur, was du **sicher** erkennst: einmal tippen = Milbe, zweimal = keine Milbe, dreimal = wieder offen. Unsicheres bleibt offen. Lang drücken oder ⓘ: größerer Ausschnitt und optional der Verwechsler (Pollen, Wachs, Propolis, Bienenteil, Sonstiges).
+2. **Ausschnitte prüfen:** Die App zeigt große Ausschnitte (7 × 7 mm) mit einem Kreis in Milbengröße, sortiert nach ihrer **Konfidenz** (wie sicher sie ist, dass dort eine Milbe liegt). Unter jedem Ausschnitt: **✓ Milbe**, **✗ Keine** oder **Offen** (wenn du unsicher bist). Liegt die Milbe nicht genau im Kreis, tipp im Bild auf die Milbe, dann wandert der Kreis dorthin. Über **▾** kannst du optional angeben, was es sonst ist (Pollen, Wachs, Propolis, Bienenteil, Sonstiges).
    - **Abfragegrenze:** Abgefragt wird alles oberhalb einer Konfidenz, unter der bisher höchstens 5 % der bestätigten Milben lagen. Am Anfang fragt die App deshalb viel, mit besserem Modell immer weniger.
    - **Stichprobe:** Am Ende kommen 20 zufällige Kacheln unterhalb der Grenze. Sie zeigen, ob dort noch Milben versteckt sind.
 3. **Nachtragen (optional):** Milben antippen, die nicht abgefragt wurden.

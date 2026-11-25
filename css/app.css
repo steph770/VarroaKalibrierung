@@ -194,3 +194,20 @@ svg.chart .cross { stroke: #b9b0a5; stroke-width: 1; stroke-dasharray: 3 3; }
 details summary { cursor: pointer; color: var(--brand); font-size: 0.9rem; margin-top: 8px; }
 dl.gloss dt { font-weight: 650; margin-top: 8px; }
 dl.gloss dd { margin: 2px 0 0; color: var(--ink-2); font-size: 0.9rem; }
+
+/* große Prüfkarten */
+.cards { display: flex; flex-direction: column; gap: 14px; margin: 10px 0; align-items: center; }
+.rcard { width: 100%; max-width: 520px; background: #fff; border: 3px solid var(--line); border-radius: 14px; padding: 8px; }
+.rcard.m { border-color: #2f9e5b; }
+.rcard.k { border-color: #9a8f84; }
+.rcard canvas { display: block; width: 100%; height: auto; border-radius: 8px; cursor: crosshair; touch-action: manipulation; }
+.rcard-head { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--ink-2); margin: 0 2px 6px; }
+.card-state { font-weight: 650; color: var(--ink); }
+.rcard-btns { margin-top: 8px; }
+.seg-b { flex: 1; min-height: 46px; padding: 8px 6px; }
+.seg-b.more { flex: 0 0 52px; }
+.seg-b.on-m { background: var(--ok); border-color: var(--ok); color: #fff; }
+.seg-b.on-k { background: #6f665d; border-color: #6f665d; color: #fff; }
+.seg-b.on-o { background: #efe8dc; }
+.causes { margin-top: 8px; }
+.causes .btn.primary { background: #6f665d; border-color: #6f665d; color: #fff; }

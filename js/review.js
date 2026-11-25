@@ -7,7 +7,7 @@ import { state, refreshModels, refreshMembers, latestModel, modelAt, retrain } f
 import { predict, samplesForImage, countWithModel, CAUSES, MATCH_MM } from './model.js';
 import { FEATURES, GEN_VERSION } from './detect.js';
 
-const PAGE = 20, TILE_MM = 5, CONTEXT_MM = 14, AUDIT_N = 20, MAX_QUERY = 400, LOCK_MIN = 30;
+const PAGE = 10, TILE_MM = 7, CONTEXT_MM = 14, MITE_R_MM = 1.1, AUDIT_N = 20, MAX_QUERY = 400, LOCK_MIN = 30;
 const MIN_MITES_FOR_BAND = 30, BAND_RECALL = 0.95;
 
 // Abfragegrenze: so tief, dass 95 % der bisher bestätigten Milben darüber lägen.
@@ -117,14 +117,14 @@ export async function reviewView(el, id) {
   function renderTiles() {
     body.innerHTML = ''; if (zv) { zv.destroy(); zv = null; }
     const from = page * PAGE, to = Math.min(tiles.length, from + PAGE);
-    const grid = h('div', { class: 'tiles' });
-    const sizeCss = Math.floor(Math.min(140, (Math.min(window.innerWidth, 720) - 40) / 4 - 8));
-    for (let k = from; k < to; k++) grid.append(tileEl(tiles[k], sizeCss));
+    const grid = h('div', { class: 'cards' });
+    const sizeCss = Math.floor(Math.min(window.innerWidth - 52, 500));
+    for (let k = from; k < to; k++) grid.append(tileEl(tiles[k], sizeCss, k + 1));
     const nAudit = tiles.filter(t => t.audit).length;
     put(body,
       h('div', { class: 'stepbar' }, h('b', {}, '1 Kacheln'), h('span', {}, '2 Nachtragen'), h('span', {}, '3 Abschluss')),
       h('p', { class: 'small' }, `Kacheln ${tiles.length ? from + 1 : 0}–${to} von ${tiles.length} · `, h('b', {}, `${nM()} Milben`), ` · ${nK()} keine`),
-      h('p', { class: 'muted small' }, 'Markiere nur, was du sicher erkennst: einmal tippen = Milbe (grün), zweimal = keine Milbe (grau), dreimal = wieder offen. Unsicheres einfach offen lassen. Lang drücken oder ⓘ: größerer Ausschnitt und Verwechsler angeben. Die Prozentzahl ist die Konfidenz des Modells.'),
+      h('p', { class: 'muted small' }, 'Je Ausschnitt: Milbe, keine Milbe oder offen lassen, wenn du unsicher bist. Liegt die Milbe nicht genau im Kreis, tipp im Bild auf die Milbe, dann wandert der Kreis dorthin. Über ▾ kannst du angeben, was es sonst ist. Die Prozentzahl ist die Konfidenz des Modells.'),
       from === 0 ? h('p', { class: 'muted small' }, band.limit > 0
         ? `Abgefragt wird alles ab ${Math.round(band.limit * 100)} % Konfidenz (darüber lagen 95 % der ${band.nMites} bisher bestätigten Milben) und ${nAudit} zufällige Kacheln darunter als Stichprobe.`
         : `Das Modell kennt noch zu wenige bestätigte Milben (${band.nMites} von ${MIN_MITES_FOR_BAND}), deshalb fragt es noch alles ab, sortiert nach Konfidenz. Du musst nicht alle Kacheln ansehen.`) : null,
@@ -154,43 +154,56 @@ export async function reviewView(el, id) {
     if (c) t.point.c = c; else delete t.point.c;
   }
 
-  function tileEl(t, sizeCss) {
-    const cnv = tileCanvas(img, t.x, t.y, TILE_MM * ppm, sizeCss);
-    const badge = h('span', { class: 'badge' });
-    const conf = h('span', { class: 'conf' }, t.sugg ? 'Schraube' : t.audit ? 'Stichprobe' : `${Math.round(t.cand.p * 100)} %`);
-    const info = h('button', { class: 'tinfo', title: 'Details' }, 'ⓘ');
-    const box = h('div', { class: 'tile' }, cnv, badge, conf, info);
-    const paint = () => {
-      const p = t.point; box.className = 'tile'; badge.textContent = '';
-      if (!p) return;
-      if (p.l === 'm') { box.classList.add('m'); if (p.p) box.classList.add('pre'); badge.textContent = '✓'; }
-      else if (p.l === 'k') { box.classList.add(p.c ? 'k' : 'k0'); badge.textContent = p.c ? (CAUSES[p.c] || p.c) : '✗'; }
+  function tileEl(t, sizeCss, num) {
+    const field = TILE_MM * ppm;                 // Bildausschnitt in Pixeln (fester Rahmen um den Kandidaten)
+    const x0 = t.x - field / 2, y0 = t.y - field / 2;
+    const cnv = tileCanvas(img, t.x, t.y, field, sizeCss, false);
+    const ctx = cnv.getContext('2d'); const base = ctx.getImageData(0, 0, cnv.width, cnv.height);
+    const s = cnv.width / field;
+    const draw = () => {
+      ctx.putImageData(base, 0, 0);
+      const px = t.point ? t.point.x : t.x, py = t.point ? t.point.y : t.y;
+      const col = !t.point ? 'rgba(255,255,255,0.95)' : t.point.l === 'm' ? '#3ddc84' : '#bbbbbb';
+      ctx.lineWidth = Math.max(2, cnv.width / 160);
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.beginPath(); ctx.arc((px - x0) * s, (py - y0) * s, MITE_R_MM * ppm * s, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = Math.max(1.5, cnv.width / 240); ctx.strokeStyle = col; ctx.setLineDash(t.point && t.point.p ? [8, 6] : []);
+      ctx.beginPath(); ctx.arc((px - x0) * s, (py - y0) * s, MITE_R_MM * ppm * s, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
     };
-    let timer = null, long = false;
-    box.addEventListener('pointerdown', (e) => { if (e.target === info) return; long = false; timer = setTimeout(() => { long = true; openDetail(); }, 450); });
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => box.addEventListener(ev, () => clearTimeout(timer)));
-    box.addEventListener('contextmenu', e => e.preventDefault());
-    box.addEventListener('click', (e) => {
-      if (e.target === info || long) return;
-      const cur = t.point ? t.point.l : null;
-      setLabel(t, cur === null ? 'm' : cur === 'm' ? 'k' : null); paint();
-    });
-    info.onclick = (e) => { e.stopPropagation(); openDetail(); };
-    function openDetail() {
-      const big = tileCanvas(img, t.x, t.y, CONTEXT_MM * ppm, Math.min(320, window.innerWidth - 48), false);
-      const ctx = big.getContext('2d'); const W = big.width;
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(2, W / 150);
-      ctx.beginPath(); ctx.arc(W / 2, W / 2, W * (1.4 / CONTEXT_MM), 0, Math.PI * 2); ctx.stroke();
-      const close = sheet(h('div', { class: 'detail' }, big,
-        t.cand ? h('p', { class: 'muted small center' }, `Konfidenz des Modells: ${Math.round(t.cand.p * 100)} %`) : null,
-        h('div', { class: 'row gap' },
-          h('button', { class: 'btn ok grow', onclick: () => { setLabel(t, 'm'); paint(); close(); } }, 'Sicher Milbe'),
-          h('button', { class: 'btn grow', onclick: () => { setLabel(t, 'k'); paint(); close(); } }, 'Sicher keine'),
-          h('button', { class: 'btn ghost grow', onclick: () => { setLabel(t, null); paint(); close(); } }, 'Offen lassen')),
-        h('p', { class: 'muted small' }, 'Optional, nur wenn eindeutig - was ist es stattdessen?'),
-        h('div', { class: 'row gap wrap' }, Object.entries(CAUSES).map(([k, v]) =>
-          h('button', { class: `btn small ${t.point && t.point.c === k ? 'primary' : 'ghost'}`, onclick: () => { setLabel(t, 'k', k); paint(); close(); } }, v)))));
+    const tag = t.sugg ? 'Schrauben-Vorschlag' : t.audit ? 'Stichprobe' : `Konfidenz ${Math.round(t.cand.p * 100)} %`;
+    const bM = h('button', { class: 'btn seg-b' }, '✓ Milbe'), bK = h('button', { class: 'btn seg-b' }, '✗ Keine'), bO = h('button', { class: 'btn seg-b' }, 'Offen');
+    const more = h('button', { class: 'btn seg-b more', title: 'Was ist es sonst?' }, '▾');
+    const causeRow = h('div', { class: 'row gap wrap causes', style: { display: 'none' } });
+    const label = h('span', { class: 'card-state' });
+    const box = h('div', { class: 'rcard' },
+      h('div', { class: 'rcard-head' }, h('span', {}, `#${num} · ${tag}`), label),
+      cnv,
+      h('div', { class: 'row gap rcard-btns' }, bM, bK, bO, more),
+      causeRow);
+    const paint = () => {
+      const l = t.point ? t.point.l : null;
+      bM.classList.toggle('on-m', l === 'm'); bK.classList.toggle('on-k', l === 'k'); bO.classList.toggle('on-o', !l);
+      label.textContent = !l ? 'offen' : l === 'm' ? (t.point.p ? 'Milbe (Vorschlag)' : 'Milbe') : (t.point.c ? `keine: ${CAUSES[t.point.c] || t.point.c}` : 'keine Milbe');
+      box.className = 'rcard' + (l === 'm' ? ' m' : l === 'k' ? ' k' : '');
+      causeRow.querySelectorAll('button').forEach(b => b.classList.toggle('primary', !!(t.point && t.point.c === b.dataset.c)));
+      draw();
+    };
+    bM.onclick = () => { setLabel(t, 'm'); paint(); };
+    bK.onclick = () => { setLabel(t, 'k'); paint(); };
+    bO.onclick = () => { setLabel(t, null); paint(); };
+    more.onclick = () => { causeRow.style.display = causeRow.style.display === 'none' ? '' : 'none'; more.textContent = causeRow.style.display === 'none' ? '▾' : '▴'; };
+    for (const [k, v] of Object.entries(CAUSES)) {
+      const b = h('button', { class: 'btn small ghost', 'data-c': k }, v);
+      b.onclick = () => { setLabel(t, 'k', k); paint(); };
+      causeRow.append(b);
     }
+    // Tippen ins Bild: Milbe liegt hier -> Kreis verschieben und als Milbe markieren
+    cnv.addEventListener('click', (e) => {
+      const r = cnv.getBoundingClientRect();
+      const ix = x0 + (e.clientX - r.left) / r.width * field, iy = y0 + (e.clientY - r.top) / r.height * field;
+      setLabel(t, 'm');
+      t.point.x = Math.round(ix * 10) / 10; t.point.y = Math.round(iy * 10) / 10; t.point.moved = 1;
+      paint();
+    });
     paint();
     return box;
   }
