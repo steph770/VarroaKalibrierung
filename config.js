@@ -5,4 +5,5 @@
 export const CONFIG = {
   supabaseUrl: 'https://grrcwjkpdodibqinzphw.supabase.co',
   supabaseAnonKey: 'sb_publishable_o9W3veBEmz5Dg6JXgy5RSA_WO7Hg8C9',
+  minPxPerMm: 15,        // Mindestauflösung für neue Runs (Pixel pro mm auf der Windel)
 };

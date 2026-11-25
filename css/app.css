@@ -211,3 +211,6 @@ dl.gloss dd { margin: 2px 0 0; color: var(--ink-2); font-size: 0.9rem; }
 .seg-b.on-o { background: #efe8dc; }
 .causes { margin-top: 8px; }
 .causes .btn.primary { background: #6f665d; border-color: #6f665d; color: #fff; }
+.ref-line { stroke: #4ea1ff; stroke-width: 4; vector-effect: non-scaling-stroke; }
+.handle.ref { fill: rgba(78, 161, 255, 0.85); stroke: #0b3d91; }
+.ref-label { fill: #fff; stroke: #0b3d91; stroke-width: 3; paint-order: stroke; font-weight: 700; vector-effect: non-scaling-stroke; }

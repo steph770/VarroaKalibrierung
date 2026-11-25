@@ -115,6 +115,7 @@ create table if not exists public.images (
 alter table public.images add column if not exists windel_w_mm numeric;
 alter table public.images add column if not exists windel_l_mm numeric;
 alter table public.images add column if not exists width_dir text check (width_dir in ('senkrecht', 'waagrecht'));
+alter table public.images add column if not exists scale_ref jsonb;
 create index if not exists images_status_idx on public.images (status);
 alter table public.images enable row level security;
 

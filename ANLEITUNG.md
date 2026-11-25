@@ -51,13 +51,14 @@ Codes später ändern: im SQL Editor
 
 Danach lernt das Modell aus dem Run und schätzt das nächste Foto mit der neuen Version. Jedes Bild ist also **zuerst Test, dann Training**. Die Statistik vergleicht jede Schätzung mit dem, was beim Prüfen sicher markiert wurde.
 
-## 5. Gute Fotos
+## 5. Gute Fotos (ab jetzt: Teilaufnahmen)
 
-- ganze Windel im Bild, senkrecht von oben
-- gleichmäßiges Licht, keine harten Schatten
-- höchste Kamera-Auflösung, Format JPEG (am iPhone: Einstellungen → Kamera → Formate → „Maximale Kompatibilität“)
-- **Maßstab:** Die App rechnet mit Millimetern und braucht deshalb einen Maßstab. Dafür trägst du die Windelbreite in Rähmchenrichtung ein (bei euch 445 mm; die App merkt sich den Wert) und wählst, ob diese Breite im Foto von oben nach unten oder von links nach rechts verläuft. Dann ziehst du die vier Ecken auf die Windelecken.
-- **Länge:** Sie ist optional. Ist die Windel seitlich abgeschnitten, setzt du die Punkte dort an den Bildrand. Die beiden Kanten in Breitenrichtung (gestrichelt markiert) müssen aber ganz im Bild sein.
+- Kamera auf **4:3**, höchste Auflösung, JPEG, kein Digitalzoom
+- ein **Maßband** flach auf die Windel legen, sodass es an einer Fotokante sichtbar ist
+- Bildausschnitt etwa **15 cm breit**, senkrecht von oben, gleichmäßiges Licht ohne harte Schatten
+- beim Hochladen „Maßstab über **Fotobreite**“ wählen, die abgelesene Kante (kurz oder lang) und ihre Länge in mm eintragen
+- die App rechnet daraus die Auflösung in px/mm. Unter der **Mindestauflösung von 15 px/mm** (einstellbar in `config.js`) warnt sie und lädt nur nach ausdrücklichem „trotzdem“ hoch.
+- weitere Möglichkeiten: zwei Marken am Maßband antippen oder (bei ganzer Windel) über die Windelbreite von 445 mm
 
 ## 6. Gut zu wissen
 
