@@ -207,3 +207,15 @@ create policy windeln_insert on storage.objects for insert to authenticated
   with check (bucket_id = 'windeln' and public.is_member());
 create policy windeln_delete on storage.objects for delete to authenticated
   using (bucket_id = 'windeln' and public.is_admin());
+
+-- ---------------------------------------------------------------------------
+-- Zugriffsrechte für angemeldete Nutzer (neuere Supabase-Projekte vergeben
+-- diese nicht mehr automatisch). Was jemand sehen darf, regeln weiterhin die
+-- Policies oben.
+-- ---------------------------------------------------------------------------
+grant usage on schema public to authenticated;
+grant select on public.members to authenticated;
+grant select, insert, update, delete on public.images to authenticated;
+grant select, insert, delete on public.model_versions to authenticated;
+grant usage, select on all sequences in schema public to authenticated;
+grant execute on function public.join_project(text, text), public.is_member(), public.is_admin() to authenticated;
