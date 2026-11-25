@@ -38,9 +38,9 @@ export async function uploadView(el) {
       const init = {
         file_name: file.name, colony: '', site: last.site || '',
         inserted_at: null, removed_at: exif.taken ? exif.taken.toISOString() : null,
-        windel_w_cm: seed ? '' : (last.windel_w_cm || ''), windel_l_cm: seed ? '' : (last.windel_l_cm || ''),
+        windel_w_mm: seed ? seed.windel_w_mm : (last.windel_w_mm || ''), windel_l_mm: seed ? (seed.windel_l_mm || '') : (last.windel_l_mm || ''),
+        width_dir: seed ? seed.width_dir : (last.width_dir || 'senkrecht'),
         roi: seed ? seed.roi : roiFromImage(img),
-        px_per_mm: seed ? seed.px_per_mm : null, scale_source: seed ? seed.scale_source : null,
         split: seed ? seed.split : (Math.random() < 0.25 ? 'test' : 'train'),
         taken_at: exif.taken ? exif.taken.toISOString() : null, device: exif.device || null,
       };
@@ -56,7 +56,7 @@ export async function uploadView(el) {
             candidates: cands, n_candidates: cands.list.length,
             annotations: premarks.length ? { points: premarks } : null,
           }, file, thumb);
-          remember({ site: vals.site, windel_w_cm: vals.windel_w_cm, windel_l_cm: vals.windel_l_cm });
+          remember({ site: vals.site, windel_w_mm: vals.windel_w_mm, windel_l_mm: vals.windel_l_mm, width_dir: vals.width_dir });
           await refreshModels();
           const lm = latestModel();
           const cnt = lm ? countWithModel(lm.model, { candidates: cands }) : null;
@@ -140,29 +140,29 @@ export async function runDetection(img, roi, ppm, progress) {
 // --- Formular mit Ecken-Editor ---------------------------------------------------------
 function imageForm(el, { img, url, W, H, init, seed, isNew, submitLabel, onSubmit }) {
   let roi = (init.roi || [[0, 0], [W, 0], [W, H], [0, H]]).map(p => [...p]);
-  const fixedPpm = init.scale_source && !init.windel_w_cm ? +init.px_per_mm : null;
   const inp = (attrs) => h('input', attrs);
   const f = {
     colony: inp({ type: 'text', value: init.colony || '', placeholder: 'z. B. 7' }),
     site: inp({ type: 'text', value: init.site || '', placeholder: 'z. B. Garten' }),
     ins: inp({ type: 'datetime-local', value: toLocalInput(init.inserted_at) }),
     rem: inp({ type: 'datetime-local', value: toLocalInput(init.removed_at) }),
-    ww: inp({ type: 'number', step: '0.1', min: '5', value: init.windel_w_cm || '', placeholder: 'cm' }),
-    wl: inp({ type: 'number', step: '0.1', min: '5', value: init.windel_l_cm || '', placeholder: 'cm' }),
+    ww: inp({ type: 'number', step: '1', min: '50', value: init.windel_w_mm || '', placeholder: 'z. B. 445' }),
+    wl: inp({ type: 'number', step: '1', min: '50', value: init.windel_l_mm || '', placeholder: 'optional' }),
     note: inp({ type: 'text', value: init.note || '', placeholder: 'optional' }),
   };
-  const useFixed = h('input', { type: 'checkbox', checked: !!fixedPpm });
+  const dir = h('select', {}, h('option', { value: 'senkrecht' }, 'von oben nach unten'), h('option', { value: 'waagrecht' }, 'von links nach rechts'));
+  dir.value = init.width_dir || 'senkrecht';
   const scaleInfo = h('div', { class: 'scaleinfo' });
   const days = h('span', { class: 'muted' });
-  const ppmNow = () => (useFixed.checked && fixedPpm) ? fixedPpm : pxPerMmFromRoi(roi, +f.ww.value, +f.wl.value);
+  const ppmNow = () => pxPerMmFromRoi(roi, +f.ww.value, +f.wl.value, dir.value);
   const updateInfo = () => {
     const p = ppmNow();
-    scaleInfo.textContent = p ? `Maßstab: ${p.toFixed(2)} Pixel pro mm (eine Milbe ≈ ${(1.6 * p).toFixed(0)} Pixel breit)` : 'Maßstab: bitte Windelmaß eintragen';
+    scaleInfo.textContent = p ? `Maßstab: ${p.toFixed(2)} Pixel pro mm (eine Milbe ≈ ${(1.6 * p).toFixed(0)} Pixel breit)` : 'Maßstab: bitte die Windelbreite eintragen';
     scaleInfo.className = 'scaleinfo ' + (p && p >= 3 ? 'ok' : 'warn');
     const d = f.ins.value && f.rem.value ? (new Date(f.rem.value) - new Date(f.ins.value)) / 864e5 : null;
     days.textContent = d ? `= ${d.toFixed(1)} Tage eingelegt` : '';
   };
-  Object.values(f).forEach(x => x.addEventListener('input', updateInfo)); useFixed.onchange = updateInfo;
+  Object.values(f).forEach(x => x.addEventListener('input', updateInfo)); dir.onchange = () => { updateInfo(); zv.redraw(); };
 
   const viewer = h('div', { class: 'viewer roi-editor' });
   const status = h('div', { class: 'progress muted' });
@@ -176,10 +176,10 @@ function imageForm(el, { img, url, W, H, init, seed, isNew, submitLabel, onSubmi
       days),
     h('div', { class: 'card' },
       h('h2', {}, 'Windel-Ecken und Maßstab'),
-      h('p', { class: 'muted small' }, 'Ziehe die vier Punkte auf die Ecken der Windel (zoomen mit zwei Fingern). Gezählt wird nur innerhalb der Fläche. Liegt eine Ecke außerhalb des Fotos, zieh den Punkt über den Bildrand hinaus.'),
+      h('p', { class: 'muted small' }, 'Ziehe die vier Punkte auf die Ecken der Windel (zoomen mit zwei Fingern). Gezählt wird nur innerhalb der Fläche. Ist die Windel seitlich abgeschnitten, setz die Punkte dort an den Bildrand. Die Kanten in Breitenrichtung (gestrichelt) müssen ganz im Bild sein.'),
       viewer,
-      h('div', { class: 'grid2' }, h('label', {}, 'Windel-Breite (cm)', f.ww), h('label', {}, 'Windel-Länge (cm)', f.wl)),
-      fixedPpm ? h('label', { class: 'check' }, useFixed, ` Geschätzten Maßstab verwenden (${fixedPpm.toFixed(2)} px/mm, ${init.scale_source})`) : null,
+      h('div', { class: 'grid2' }, h('label', {}, 'Windelbreite in Rähmchenrichtung (mm)', f.ww), h('label', {}, 'Windellänge (mm, falls ganz im Bild)', f.wl)),
+      h('label', {}, 'Die Breite (Rähmchenrichtung) verläuft im Foto', dir),
       scaleInfo,
       h('label', {}, 'Notiz', f.note)),
     btn, status);
@@ -189,6 +189,8 @@ function imageForm(el, { img, url, W, H, init, seed, isNew, submitLabel, onSubmi
     src: url, width: W, height: H,
     renderOverlay: (svg, s) => {
       svg.append(svgEl('polygon', { points: roi.map(p => p.join(',')).join(' '), class: 'roi edit' }));
+      const pairs = dir.value === 'waagrecht' ? [[0, 1], [3, 2]] : [[0, 3], [1, 2]];
+      for (const [a, b] of pairs) svg.append(svgEl('line', { x1: roi[a][0], y1: roi[a][1], x2: roi[b][0], y2: roi[b][1], class: 'roi-width' }));
       roi.forEach((p, i) => svg.append(svgEl('circle', { cx: p[0], cy: p[1], r: 16 / s, class: 'handle', 'data-handle': i })));
     },
     onHandleDrag: (id, x, y) => { roi[+id] = [Math.round(x), Math.round(y)]; updateInfo(); },
@@ -204,9 +206,9 @@ function imageForm(el, { img, url, W, H, init, seed, isNew, submitLabel, onSubmi
         file_name: init.file_name, taken_at: init.taken_at, device: init.device,
         colony: f.colony.value.trim() || null, site: f.site.value.trim() || null,
         inserted_at: fromLocalInput(f.ins.value), removed_at: fromLocalInput(f.rem.value),
-        windel_w_cm: f.ww.value ? +f.ww.value : null, windel_l_cm: f.wl.value ? +f.wl.value : null,
+        windel_w_mm: f.ww.value ? +f.ww.value : null, windel_l_mm: f.wl.value ? +f.wl.value : null, width_dir: dir.value,
         roi, px_per_mm: Math.round(ppm * 1e4) / 1e4,
-        scale_source: useFixed.checked && fixedPpm ? init.scale_source : 'Windelmaß',
+        scale_source: f.wl.value ? 'Windelbreite und -länge' : 'Windelbreite',
         split: init.split, note: f.note.value.trim() || null,
       }, progress);
     } catch (e) { console.error(e); toast(e.message, 'error', 7000); status.textContent = ''; btn.disabled = false; }

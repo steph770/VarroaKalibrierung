@@ -344,14 +344,15 @@ export function autoRoi(img) {
   return [tl, tr, br, bl];
 }
 
-// Maßstab aus Windel-Ecken und Windelmaß (cm): Mittel aus beiden Kantenpaaren
-export function pxPerMmFromRoi(roi, widthCm, lengthCm) {
-  if (!roi || roi.length !== 4 || !(widthCm > 0) || !(lengthCm > 0)) return null;
+// Maßstab (Pixel pro mm) aus den Windel-Ecken [oben-links, oben-rechts, unten-rechts, unten-links]
+// widthMm: Windelbreite in Rähmchenrichtung (Pflicht), lengthMm: Länge (optional, z. B. wenn abgeschnitten)
+// widthDir: 'senkrecht' = die Breite verläuft im Foto von oben nach unten, 'waagrecht' = von links nach rechts
+export function pxPerMmFromRoi(roi, widthMm, lengthMm, widthDir = 'senkrecht') {
+  if (!roi || roi.length !== 4 || !(widthMm > 0)) return null;
   const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-  const top = d(roi[0], roi[1]), bottom = d(roi[3], roi[2]), left = d(roi[0], roi[3]), right = d(roi[1], roi[2]);
-  // kurze Bildkante = Breite, lange = Länge (Ausrichtung egal)
-  const e1 = (top + bottom) / 2, e2 = (left + right) / 2;
-  const [short, long] = e1 <= e2 ? [e1, e2] : [e2, e1];
-  const [ws, wl] = widthCm <= lengthCm ? [widthCm, lengthCm] : [lengthCm, widthCm];
-  return (short / (ws * 10) + long / (wl * 10)) / 2;
+  const vertical = (d(roi[0], roi[3]) + d(roi[1], roi[2])) / 2;   // linke und rechte Kante
+  const horizontal = (d(roi[0], roi[1]) + d(roi[3], roi[2])) / 2; // obere und untere Kante
+  const [wPx, lPx] = widthDir === 'waagrecht' ? [horizontal, vertical] : [vertical, horizontal];
+  const fromWidth = wPx / widthMm;
+  return lengthMm > 0 ? (fromWidth + lPx / lengthMm) / 2 : fromWidth;
 }

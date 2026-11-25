@@ -186,6 +186,7 @@ async function detailView(el, id) {
         ['Aufnahme', fmtDateTime(rec.taken_at)], ['Gerät', rec.device || '–'],
         ['Volk / Standort', [rec.colony, rec.site].filter(Boolean).join(' · ') || '–'],
         ['Einlage', `${fmtDateTime(rec.inserted_at)} bis ${fmtDateTime(rec.removed_at)}${days ? ` (${days.toFixed(1)} Tage)` : ''}`],
+        ['Windel', rec.windel_w_mm ? `${rec.windel_w_mm} mm breit${rec.windel_l_mm ? ` × ${rec.windel_l_mm} mm lang` : ''}` : '–'],
         ['Maßstab', `${(+rec.px_per_mm).toFixed(2)} px/mm${rec.scale_source ? ` (${rec.scale_source})` : ''}`],
         ['Gruppe', SPLIT_LABEL[rec.split]],
         ['Kandidaten', rec.n_candidates ?? '–'],

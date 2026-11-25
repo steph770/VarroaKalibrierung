@@ -38,7 +38,7 @@ Codes später ändern: im SQL Editor
 2. Die Startversion des Zählmodells (v1) wird automatisch angelegt.
 3. Die 10 vorhandenen Fotos hochladen (die Fotos **ohne** „_mit_Zählung“):
    - IMG_5096 bis IMG_5101 und IMG_5215, IMG_5221, IMG_5223, IMG_5225.
-   - Die App erkennt diese Fotos und übernimmt Windel-Ecken, einen geschätzten Maßstab und bei den vier Schrauben-Fotos die Schrauben-Markierungen als Vorschläge.
+   - Die App erkennt diese Fotos und übernimmt Windel-Ecken, Windelbreite (445 mm) und bei den vier Schrauben-Fotos die Schrauben-Markierungen als Vorschläge.
    - IMG_5097, IMG_5100 und IMG_5101 sind als **Testbilder** festgelegt, die übrigen sind Trainingsbilder.
 4. **Zuerst die Testbilder prüfen.** Erst dann zeigt die Statistik etwas.
 5. Andere einladen: Link zur App und den Einladungscode schicken.
@@ -58,7 +58,8 @@ Nach jedem bestätigten **Trainingsbild** rechnet die App automatisch eine neue 
 - ganze Windel im Bild, senkrecht von oben
 - gleichmäßiges Licht, keine harten Schatten
 - höchste Kamera-Auflösung, Format JPEG (am iPhone: Einstellungen → Kamera → Formate → „Maximale Kompatibilität“)
-- Windel-Breite und -Länge in cm eintragen und die vier Ecken auf die Windelecken ziehen: daraus berechnet die App den Maßstab. Der Maßstab ist wichtig, weil die Erkennung mit Millimetern rechnet.
+- **Maßstab:** Die App rechnet mit Millimetern und braucht deshalb einen Maßstab. Dafür trägst du die Windelbreite in Rähmchenrichtung ein (bei euch 445 mm; die App merkt sich den Wert) und wählst, ob diese Breite im Foto von oben nach unten oder von links nach rechts verläuft. Dann ziehst du die vier Ecken auf die Windelecken.
+- **Länge:** Sie ist optional. Ist die Windel seitlich abgeschnitten, setzt du die Punkte dort an den Bildrand. Die beiden Kanten in Breitenrichtung (gestrichelt markiert) müssen aber ganz im Bild sein.
 
 ## 6. Gut zu wissen
 

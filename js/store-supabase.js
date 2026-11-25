@@ -1,7 +1,7 @@
 // Speicher-Anbindung an Supabase (gemeinsame Datenbank für alle Mitwirkenden)
 
 const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-const LIGHT_COLS = 'id,created_at,created_by,updated_at,file_name,file_path,thumb_path,width,height,taken_at,device,colony,site,inserted_at,removed_at,windel_w_cm,windel_l_cm,roi,px_per_mm,scale_source,split,status,reviewed_by,confirmed_by,n_candidates,n_mites,note';
+const LIGHT_COLS = 'id,created_at,created_by,updated_at,file_name,file_path,thumb_path,width,height,taken_at,device,colony,site,inserted_at,removed_at,windel_w_mm,windel_l_mm,width_dir,roi,px_per_mm,scale_source,split,status,reviewed_by,confirmed_by,n_candidates,n_mites,note';
 
 export class SupabaseStore {
   constructor(url, anonKey) {
