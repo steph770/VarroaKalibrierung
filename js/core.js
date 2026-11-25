@@ -42,7 +42,7 @@ export async function refreshModels() {
     try {
       const m = await (await fetch('seed/model_v1.json')).json();
       const { note, ...model } = m;
-      await state.store.createModel({ gen: model.gen, model, n_images: 4, n_pos: model.nPos, n_neg: model.nNeg, train_ids: [], note });
+      await state.store.createModel({ gen: model.gen, model, n_images: 0, n_pos: model.nPos, n_neg: model.nNeg, train_ids: [], note });
       state.models = await state.store.listModels();
     } catch (e) { console.warn('Startmodell nicht geladen', e); }
   }
@@ -61,9 +61,9 @@ export async function refreshMembers() {
 export const memberName = id => (state.members.find(m => m.id === id) || {}).kuerzel || (id ? '?' : '–');
 
 // Neues Modell aus allen bestätigten Trainingsbildern berechnen
-export async function retrain(note = 'automatisch nach Bestätigung') {
+export async function retrain(note = 'automatisch nach Prüfung') {
   const imgs = (await state.store.listImagesFull({ status: 'bestaetigt' }))
-    .filter(i => i.split === 'train' && i.candidates && i.candidates.gen === GEN_VERSION && i.annotations);
+    .filter(i => i.candidates && i.candidates.gen === GEN_VERSION && i.annotations);
   const samples = imgs.flatMap(samplesForImage);
   const model = train(samples);
   const row = await state.store.createModel({ gen: GEN_VERSION, model, n_images: imgs.length, n_pos: model.nPos, n_neg: model.nNeg, train_ids: imgs.map(i => i.id), note });
@@ -80,5 +80,13 @@ export function seedFor(fileName, exif, w, h) {
   return null;
 }
 
-export const STATUS_LABEL = { neu: 'neu', geprueft: 'wartet auf Zweitprüfung', bestaetigt: 'bestätigt' };
-export const SPLIT_LABEL = { train: 'Training', test: 'Test' };
+export const STATUS_LABEL = { neu: 'offen', geprueft: 'offen', bestaetigt: 'geprüft' };
+
+// Modell, das beim Hochladen eines Bildes aktuell war (damit wurde das Bild geschätzt)
+export function modelAt(date) {
+  const ms = state.models.filter(m => m.gen === GEN_VERSION);
+  if (!ms.length) return null;
+  const t = new Date(date || Date.now()).getTime();
+  const before = ms.filter(m => new Date(m.created_at).getTime() <= t);
+  return before.length ? before[before.length - 1] : ms[0];
+}

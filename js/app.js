@@ -1,6 +1,6 @@
 // Varroa-Kalibrierung - Einstieg, Navigation und einfache Ansichten
 import { h, put, toast, confirmDialog, fmtDate, fmtDateTime, loadImage, ZoomView, svgEl, marker, download } from './ui.js';
-import { state, openStore, storeSettings, saveSettings, refreshModels, refreshMembers, latestModel, memberName, loadSeed, retrain, STATUS_LABEL, SPLIT_LABEL } from './core.js';
+import { state, openStore, storeSettings, saveSettings, refreshModels, refreshMembers, latestModel, modelAt, memberName, loadSeed, retrain, STATUS_LABEL } from './core.js';
 import { uploadView, editView } from './upload.js';
 import { reviewView } from './review.js';
 import { statsView } from './stats.js';
@@ -109,30 +109,28 @@ async function homeView(el) {
   const me = state.store.session();
   const [imgs] = await Promise.all([state.store.listImages(), refreshModels(), refreshMembers()]);
   const n = s => imgs.filter(i => i.status === s).length;
-  const second = imgs.filter(i => i.status === 'geprueft' && i.reviewed_by !== me.id);
-  const firstNew = imgs.filter(i => i.status === 'neu').sort((a, b) => (a.split === 'test' ? -1 : 1) - (b.split === 'test' ? -1 : 1))[0];
+  const open = imgs.filter(i => i.status !== 'bestaetigt').sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+  const firstNew = open[0];
   const conf = imgs.filter(i => i.status === 'bestaetigt');
-  const confTest = conf.filter(i => i.split === 'test').length;
   const lm = latestModel();
   put(el, 
     h('h1', {}, 'Übersicht'),
     h('div', { class: 'kpis' },
-      kpi(n('neu'), 'zu prüfen'),
-      kpi(second.length, 'Zweitprüfung für dich'),
-      kpi(conf.length, `bestätigt (${confTest} Test)`),
+      kpi(open.length, 'zu prüfen'),
+      kpi(conf.length, 'geprüft'),
+      kpi(state.models.length, 'Modellversionen'),
     ),
-    confTest === 0 && imgs.some(i => i.split === 'test') ? h('div', { class: 'card hint' }, 'Tipp: Prüfe zuerst die Testbilder. Erst wenn Testbilder bestätigt sind, zeigt die Statistik, wie gut die App zählt.') : null,
+    !conf.length ? h('div', { class: 'card hint' }, 'Ablauf: Foto hochladen → die App schätzt mit dem aktuellen Modell → du prüfst die Kacheln → die Statistik zeigt, wie gut die Schätzung war → das Modell lernt daraus und schätzt das nächste Foto. Lade die Fotos am besten nacheinander hoch und prüfe jedes, bevor das nächste kommt.') : null,
     h('div', { class: 'actions' },
       h('a', { class: 'btn primary big', href: '#/hochladen' }, '＋ Windelfoto hochladen'),
-      firstNew ? h('a', { class: 'btn big', href: `#/pruefen/${firstNew.id}` }, `Nächstes Bild prüfen${firstNew.split === 'test' ? ' (Test)' : ''}`) : null,
-      second[0] ? h('a', { class: 'btn big', href: `#/pruefen/${second[0].id}` }, 'Zweitprüfung starten') : null,
+      firstNew ? h('a', { class: 'btn big', href: `#/pruefen/${firstNew.id}` }, 'Nächstes Bild prüfen') : null,
       h('a', { class: 'btn big', href: '#/statistik' }, 'Statistik'),
     ),
     h('div', { class: 'card' },
       h('h2', {}, 'Zählmodell'),
       lm ? h('p', {}, `Aktuell: Version ${lm.id} vom ${fmtDateTime(lm.created_at)} - gelernt aus ${lm.n_images ?? '?'} ${lm.n_images === 1 ? 'Bild' : 'Bildern'} (${lm.n_pos ?? '?'} Milben).`) : h('p', {}, 'Noch kein Modell.'),
       lm && lm.note ? h('p', { class: 'muted' }, lm.note) : null,
-      h('p', { class: 'muted' }, 'Jedes bestätigte Trainingsbild erzeugt automatisch eine neue Version. Testbilder werden nie zum Lernen verwendet.')),
+      h('p', { class: 'muted' }, 'Jedes geprüfte Bild wird zuerst mit dem Modell geschätzt, das beim Hochladen aktuell war (Test), und danach zum Lernen verwendet (Training). Jede Prüfung erzeugt eine neue Version.')),
   );
 }
 const kpi = (v, l) => h('div', { class: 'kpi' }, h('div', { class: 'kpi-v' }, v), h('div', { class: 'kpi-l' }, l));
@@ -142,23 +140,22 @@ async function listView(el) {
   const imgs = await state.store.listImages();
   await refreshMembers();
   const filter = h('select', {},
-    h('option', { value: 'alle' }, 'Alle'), h('option', { value: 'neu' }, 'Zu prüfen'),
-    h('option', { value: 'geprueft' }, 'Wartet auf Zweitprüfung'), h('option', { value: 'bestaetigt' }, 'Bestätigt'));
+    h('option', { value: 'alle' }, 'Alle'), h('option', { value: 'neu' }, 'Zu prüfen'), h('option', { value: 'bestaetigt' }, 'Geprüft'));
   const list = h('div', { class: 'list' });
   const render = () => {
     list.innerHTML = '';
     const f = filter.value;
-    const sel = imgs.filter(i => f === 'alle' || i.status === f);
+    const sel = imgs.filter(i => f === 'alle' || (f === 'bestaetigt' ? i.status === 'bestaetigt' : i.status !== 'bestaetigt'));
     if (!sel.length) put(list, h('p', { class: 'muted center' }, 'Keine Bilder.'));
     for (const i of sel) {
       const th = h('div', { class: 'thumb' });
       state.store.getBlob(i.thumb_path).then(b => { th.style.backgroundImage = `url(${URL.createObjectURL(b)})`; }).catch(() => {});
       put(list, h('a', { class: 'item', href: `#/bild/${i.id}` }, th,
         h('div', { class: 'item-body' },
-          h('div', { class: 'item-title' }, i.file_name || 'Foto', ' ', h('span', { class: `chip ${i.split}` }, SPLIT_LABEL[i.split])),
+          h('div', { class: 'item-title' }, i.file_name || 'Foto'),
           h('div', { class: 'muted small' }, [fmtDate(i.taken_at || i.created_at), i.colony && `Volk ${i.colony}`, i.site].filter(Boolean).join(' · ')),
           h('div', { class: 'small' }, h('span', { class: `chip st-${i.status}` }, STATUS_LABEL[i.status]),
-            i.n_mites !== null && i.n_mites !== undefined && i.status !== 'neu' ? ` ${i.n_mites} Milben geprüft` : ''),
+            i.n_mites !== null && i.n_mites !== undefined && i.status === 'bestaetigt' ? ` ${i.n_mites} sichere Milben` : ''),
         )));
     }
   };
@@ -171,12 +168,12 @@ async function detailView(el, id) {
   const rec = await state.store.getImage(id);
   const me = state.store.session(); const admin = me.role === 'admin';
   await Promise.all([refreshModels(), refreshMembers()]);
-  const lm = latestModel();
+  const lm = modelAt(rec.created_at);
   const appCount = lm ? countWithModel(lm.model, rec) : null;
   const viewer = h('div', { class: 'viewer' });
   const pts = (rec.annotations && rec.annotations.points) || [];
   const days = rec.inserted_at && rec.removed_at ? (new Date(rec.removed_at) - new Date(rec.inserted_at)) / 864e5 : null;
-  const canReview = rec.status === 'neu' || (rec.status === 'geprueft' && (rec.reviewed_by !== me.id || admin)) || admin;
+  const canReview = rec.status !== 'bestaetigt' || admin || rec.reviewed_by === me.id;
   put(el, 
     h('div', { class: 'row between' }, h('a', { href: '#/bilder', class: 'back' }, '‹ Bilder'), h('span', { class: `chip st-${rec.status}` }, STATUS_LABEL[rec.status])),
     h('h1', {}, rec.file_name || 'Windelfoto'),
@@ -188,22 +185,16 @@ async function detailView(el, id) {
         ['Einlage', `${fmtDateTime(rec.inserted_at)} bis ${fmtDateTime(rec.removed_at)}${days ? ` (${days.toFixed(1)} Tage)` : ''}`],
         ['Windel', rec.windel_w_mm ? `${rec.windel_w_mm} mm breit${rec.windel_l_mm ? ` × ${rec.windel_l_mm} mm lang` : ''}` : '–'],
         ['Maßstab', `${(+rec.px_per_mm).toFixed(2)} px/mm${rec.scale_source ? ` (${rec.scale_source})` : ''}`],
-        ['Gruppe', SPLIT_LABEL[rec.split]],
         ['Kandidaten', rec.n_candidates ?? '–'],
-        ['App-Zählung', appCount === null ? '–' : `${appCount} Milben (Modell v${lm.id})`],
-        ['Geprüfte Zählung', rec.status === 'neu' ? 'noch nicht geprüft' : `${rec.n_mites} Milben${days ? ` = ${(rec.n_mites / days).toFixed(1)} pro Tag` : ''}`],
-        ['Geprüft von', memberName(rec.reviewed_by)], ['Bestätigt von', memberName(rec.confirmed_by)],
+        ['Schätzung der App', appCount === null ? '–' : `${appCount} Milben (Modell v${lm.id}, beim Hochladen aktuell)`],
+        ['Prüfung', rec.status !== 'bestaetigt' ? 'noch nicht geprüft' : `${rec.n_mites} sichere Milben${rec.annotations && rec.annotations.complete ? ` (vollständig gezählt${days ? `, ${(rec.n_mites / days).toFixed(1)} pro Tag` : ''})` : ''}`],
+        ['Geprüft von', memberName(rec.reviewed_by)],
       ])),
     h('div', { class: 'actions' },
-      canReview ? h('a', { class: 'btn primary', href: `#/pruefen/${id}` }, rec.status === 'neu' ? 'Prüfen' : rec.status === 'geprueft' ? 'Zweitprüfung' : 'Prüfung ansehen/ändern') : null,
+      canReview ? h('a', { class: 'btn primary', href: `#/pruefen/${id}` }, rec.status !== 'bestaetigt' ? 'Prüfen' : 'Prüfung ändern') : null,
       rec.status === 'neu' || admin ? h('a', { class: 'btn', href: `#/bearbeiten/${id}` }, 'Ecken, Maßstab & Angaben ändern') : null,
-      admin ? h('button', { class: 'btn', onclick: async () => {
-        const split = rec.split === 'test' ? 'train' : 'test';
-        if (!await confirmDialog(`Bild zur Gruppe „${SPLIT_LABEL[split]}“ verschieben?${rec.status === 'bestaetigt' ? ' Die Statistik ändert sich dadurch.' : ''}`)) return;
-        await state.store.updateImage(id, { split }); toast('Gespeichert', 'ok'); route();
-      } }, 'Test/Training tauschen') : null,
       admin && rec.status !== 'neu' ? h('button', { class: 'btn', onclick: async () => {
-        if (!await confirmDialog('Prüfung zurücksetzen? Die Markierungen bleiben erhalten, das Bild muss aber neu geprüft und bestätigt werden.')) return;
+        if (!await confirmDialog('Prüfung zurücksetzen? Die Markierungen bleiben erhalten, das Bild gilt aber wieder als offen.')) return;
         await state.store.updateImage(id, { status: 'neu', reviewed_by: null, confirmed_by: null }); toast('Zurückgesetzt', 'ok'); route();
       } }, 'Zurücksetzen') : null,
       admin ? h('button', { class: 'btn danger', onclick: async () => {

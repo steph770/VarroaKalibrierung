@@ -129,7 +129,7 @@ create policy images_update on public.images for update to authenticated
   using (public.is_member()) with check (public.is_member());
 create policy images_delete on public.images for delete to authenticated using (public.is_admin());
 
--- Regeln für die Zweitprüfung, serverseitig erzwungen
+-- Regeln für Prüfungen, serverseitig erzwungen
 create or replace function public.images_guard() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
@@ -140,26 +140,18 @@ begin
     end if;
     return new;
   end if;
-  if new.split is distinct from old.split and not public.is_admin() then
-    raise exception 'Nur Admins dürfen Test/Training ändern';
-  end if;
   if new.status = 'neu' and old.status <> 'neu' and not public.is_admin() then
     raise exception 'Nur Admins dürfen Bilder zurücksetzen';
   end if;
-  if new.status = 'geprueft' and old.status = 'neu' and new.reviewed_by is distinct from auth.uid() then
-    raise exception 'reviewed_by muss die eigene Kennung sein';
-  end if;
   if new.status = 'bestaetigt' and old.status <> 'bestaetigt' then
-    if new.confirmed_by is distinct from auth.uid() then
-      raise exception 'confirmed_by muss die eigene Kennung sein';
-    end if;
-    if not public.is_admin() and (new.reviewed_by is null or new.reviewed_by = auth.uid()) then
-      raise exception 'Die Zweitprüfung muss von einer anderen Person kommen';
+    if new.reviewed_by is distinct from auth.uid() then
+      raise exception 'reviewed_by muss die eigene Kennung sein';
     end if;
   end if;
   if old.status = 'bestaetigt' and new.status = 'bestaetigt'
-     and new.annotations is distinct from old.annotations and not public.is_admin() then
-    raise exception 'Bestätigte Bilder kann nur ein Admin ändern';
+     and new.annotations is distinct from old.annotations
+     and not public.is_admin() and old.reviewed_by is distinct from auth.uid() then
+    raise exception 'Geprüfte Bilder kann nur die prüfende Person oder ein Admin ändern';
   end if;
   return new;
 end $$;

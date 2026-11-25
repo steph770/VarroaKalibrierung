@@ -151,6 +151,7 @@ table.data th { color: var(--ink-2); font-weight: 550; }
 .tile .badge:empty { display: none; }
 .tile.m .badge { background: #2f9e5b; }
 .tile.u .badge { background: #b98500; }
+.tile .conf { position: absolute; left: 4px; bottom: 4px; font-size: 0.68rem; line-height: 1.2; padding: 1px 5px; border-radius: 6px; color: #fff; background: rgba(0, 0, 0, 0.55); }
 .tinfo { position: absolute; right: 3px; bottom: 3px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 0.85rem; line-height: 1; cursor: pointer; }
 .sticky-actions { position: sticky; bottom: 72px; background: linear-gradient(transparent, var(--bg) 30%); padding: 14px 0 6px; z-index: 5; }
 

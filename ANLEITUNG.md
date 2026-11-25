@@ -35,23 +35,21 @@ Codes später ändern: im SQL Editor
 ## 3. Erster Start
 
 1. App öffnen, mit dem **Admin-Code** und deinem Kürzel beitreten. Damit bist du Admin.
-2. Die Startversion des Zählmodells (v1) wird automatisch angelegt.
-3. Die 10 vorhandenen Fotos hochladen (die Fotos **ohne** „_mit_Zählung“):
-   - IMG_5096 bis IMG_5101 und IMG_5215, IMG_5221, IMG_5223, IMG_5225.
-   - Die App erkennt diese Fotos und übernimmt Windel-Ecken, Windelbreite (445 mm) und bei den vier Schrauben-Fotos die Schrauben-Markierungen als Vorschläge.
-   - IMG_5097, IMG_5100 und IMG_5101 sind als **Testbilder** festgelegt, die übrigen sind Trainingsbilder.
-4. **Zuerst die Testbilder prüfen.** Erst dann zeigt die Statistik etwas.
+2. Die **Startregel v0** wird automatisch angelegt (kein Training, nur „dunkel, oval, milbengroß“).
+3. **Die ersten Runs: die vier Schrauben-Fotos** IMG_5215, IMG_5221, IMG_5223, IMG_5225 (jeweils die Fotos **ohne** „_mit_Zählung“), **eines nach dem anderen**: hochladen, prüfen, abschließen, dann das nächste. Die Schrauben-Punkte sind als Milbe vorbelegt; stimmt ein Vorschlag nicht, antippen.
+4. Danach IMG_5096 bis IMG_5101 und neue Fotos, ebenfalls nacheinander.
 5. Andere einladen: Link zur App und den Einladungscode schicken.
 
-## 4. So läuft eine Prüfung
+## 4. So läuft ein Run
 
-1. **Kacheln:** Die App zeigt Ausschnitte (5 × 5 mm) um verdächtige Flecken, die wahrscheinlichsten zuerst. Antippen = Milbe. Lang drücken oder ⓘ = größerer Ausschnitt, „unsicher“ und optional der Verwechsler (Pollen, Wachs, Propolis, Bienenteil, Sonstiges), nur wenn er eindeutig ist. Alles nicht Markierte gilt als „keine Milbe“.
-   Wenn 40 Kacheln hintereinander keine Milbe enthalten, schlägt die App vor, zum Nachtragen weiterzugehen.
-2. **Nachtragen:** Die ganze Windel mit zwei Fingern absuchen und übersehene Milben antippen.
-3. **Abschluss:** Mitglieder schließen ab, eine **zweite Person** bestätigt. Beim Admin zählt die eigene Prüfung direkt.
-   Erst bestätigte Bilder zählen für Statistik und Training.
+1. **Hochladen:** Die App schätzt sofort mit dem aktuellen Modell, wie viele Milben auf der Windel liegen.
+2. **Kacheln prüfen:** Die App zeigt Ausschnitte (5 × 5 mm), sortiert nach ihrer **Konfidenz** (wie sicher sie ist, dass dort eine Milbe liegt). Markiere nur, was du **sicher** erkennst: einmal tippen = Milbe, zweimal = keine Milbe, dreimal = wieder offen. Unsicheres bleibt offen. Lang drücken oder ⓘ: größerer Ausschnitt und optional der Verwechsler (Pollen, Wachs, Propolis, Bienenteil, Sonstiges).
+   - **Abfragegrenze:** Abgefragt wird alles oberhalb einer Konfidenz, unter der bisher höchstens 5 % der bestätigten Milben lagen. Am Anfang fragt die App deshalb viel, mit besserem Modell immer weniger.
+   - **Stichprobe:** Am Ende kommen 20 zufällige Kacheln unterhalb der Grenze. Sie zeigen, ob dort noch Milben versteckt sind.
+3. **Nachtragen (optional):** Milben antippen, die nicht abgefragt wurden.
+4. **Abschluss:** Optional „Ich habe alle Milben markiert“ ankreuzen (nur dann wird der Zählfehler berechnet) und abschließen.
 
-Nach jedem bestätigten **Trainingsbild** rechnet die App automatisch eine neue Modellversion. **Testbilder** werden nie zum Lernen verwendet, nur zum Messen.
+Danach lernt das Modell aus dem Run und schätzt das nächste Foto mit der neuen Version. Jedes Bild ist also **zuerst Test, dann Training**. Die Statistik vergleicht jede Schätzung mit dem, was beim Prüfen sicher markiert wurde.
 
 ## 5. Gute Fotos
 
@@ -65,7 +63,7 @@ Nach jedem bestätigten **Trainingsbild** rechnet die App automatisch eine neue 
 
 - **Kostenloser Supabase-Plan (Stand November 2026):** 500 MB Datenbank, 1 GB Dateispeicher (reicht für einige hundert Fotos à ca. 3 MB), 5 GB Datenverkehr pro Monat (jede Prüfung lädt das Foto einmal). Projekte ohne Aktivität werden nach einer Woche pausiert; im Supabase-Dashboard lässt sich das Projekt mit einem Klick wieder starten.
 - **Export:** Mehr → „Export (JSON)“ speichert alle Angaben, Kandidaten und Prüfergebnisse. Damit lässt sich später ein größeres Erkennungsmodell trainieren.
-- **Rollen:** Nur Admins dürfen Test/Training tauschen, Prüfungen zurücksetzen, bestätigte Bilder ändern und Bilder löschen. Das prüft die Datenbank selbst, nicht nur die App.
+- **Rollen:** Geprüfte Bilder kann nur die prüfende Person oder ein Admin ändern. Nur Admins dürfen Prüfungen zurücksetzen und Bilder löschen. Das prüft die Datenbank selbst, nicht nur die App.
 - **Datenschutz:** Es werden nur Kürzel gespeichert, keine Namen oder E-Mail-Adressen. Die Fotos liegen in einem privaten Speicher, den nur Mitglieder lesen können.
 
 ## Aufbau (für später)
@@ -77,5 +75,5 @@ Nach jedem bestätigten **Trainingsbild** rechnet die App automatisch eine neue 
 | `js/review.js` | Prüfablauf: Kacheln, Nachtragen, Abschluss |
 | `js/stats.js` | Statistikseite |
 | `js/store-supabase.js`, `js/store-local.js` | Speicher gemeinsam bzw. nur auf dem Gerät |
-| `seed/` | Startdaten für die 10 vorhandenen Fotos und Startmodell v1 |
-| `supabase/setup.sql` | Datenbank, Zugriffsregeln, Regeln für die Zweitprüfung |
+| `seed/` | Startdaten für die 10 vorhandenen Fotos und Startregel v0 |
+| `supabase/setup.sql` | Datenbank und Zugriffsregeln |

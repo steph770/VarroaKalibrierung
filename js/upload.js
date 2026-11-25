@@ -1,6 +1,6 @@
 // Hochladen eines Windelfotos und Bearbeiten von Ecken, Maßstab und Angaben
 import { h, put, toast, loadImage, ZoomView, svgEl, makeThumb, toLocalInput, fromLocalInput, fmtDateTime } from './ui.js';
-import { state, refreshModels, latestModel, seedFor, SPLIT_LABEL } from './core.js';
+import { state, refreshModels, latestModel, seedFor } from './core.js';
 import { readExif } from './exif.js';
 import { autoRoi, pxPerMmFromRoi } from './detect.js';
 import { countWithModel } from './model.js';
@@ -41,7 +41,6 @@ export async function uploadView(el) {
         windel_w_mm: seed ? seed.windel_w_mm : (last.windel_w_mm || ''), windel_l_mm: seed ? (seed.windel_l_mm || '') : (last.windel_l_mm || ''),
         width_dir: seed ? seed.width_dir : (last.width_dir || 'senkrecht'),
         roi: seed ? seed.roi : roiFromImage(img),
-        split: seed ? seed.split : (Math.random() < 0.25 ? 'test' : 'train'),
         taken_at: exif.taken ? exif.taken.toISOString() : null, device: exif.device || null,
       };
       cleanupFn = imageForm(body, {
@@ -50,11 +49,11 @@ export async function uploadView(el) {
           const cands = await runDetection(img, vals.roi, vals.px_per_mm, progress);
           progress('Speichere Foto …');
           const thumb = await makeThumb(img);
-          const premarks = seed && seed.premarks ? seed.premarks.map(([x, y]) => ({ x, y, l: 'm', o: 'v', p: 1 })) : [];
+          const premarks = seed && seed.premarks ? seed.premarks : [];
           const rec = await state.store.createImage({
             ...vals, width: W, height: H,
             candidates: cands, n_candidates: cands.list.length,
-            annotations: premarks.length ? { points: premarks } : null,
+            annotations: premarks.length ? { points: [], suggestions: premarks } : null,
           }, file, thumb);
           remember({ site: vals.site, windel_w_mm: vals.windel_w_mm, windel_l_mm: vals.windel_l_mm, width_dir: vals.width_dir });
           await refreshModels();
@@ -63,8 +62,8 @@ export async function uploadView(el) {
           body.innerHTML = '';
           put(body, h('div', { class: 'card ok' },
             h('h2', {}, 'Gespeichert'),
-            h('p', {}, `${cands.list.length} Kandidaten gefunden. App-Zählung${lm ? ` (Modell v${lm.id})` : ''}: `, h('b', {}, cnt ?? '–'), ' Milben.'),
-            h('p', { class: 'muted' }, `Gruppe: ${SPLIT_LABEL[rec.split]}${premarks.length ? ` · ${premarks.length} Vormarkierungen aus den Schrauben-Fotos übernommen` : ''}`),
+            h('p', {}, `Schätzung der App${lm ? ` (Modell v${lm.id})` : ''}: `, h('b', {}, cnt ?? '–'), ' Milben.'),
+            h('p', { class: 'muted' }, `${cands.list.length} verdächtige Flecken gefunden${premarks.length ? ` · ${premarks.length} Vorschläge aus dem Schrauben-Foto übernommen` : ''}. Beim Prüfen siehst du, wo die App richtig lag.`),
             h('div', { class: 'row gap wrap' },
               h('a', { class: 'btn primary', href: `#/pruefen/${rec.id}` }, 'Jetzt prüfen'),
               h('button', { class: 'btn', onclick: () => { body.innerHTML = ''; pick.click(); } }, 'Weiteres Foto'))));
@@ -93,7 +92,6 @@ export async function editView(el, id) {
         const cands = await runDetection(img, vals.roi, vals.px_per_mm, progress);
         patch.candidates = cands; patch.n_candidates = cands.list.length;
       }
-      delete patch.split;
       progress('Speichere …');
       await state.store.updateImage(id, patch, rec.updated_at);
       toast(geomChanged ? 'Gespeichert und Kandidaten neu berechnet' : 'Gespeichert', 'ok');
@@ -169,7 +167,7 @@ function imageForm(el, { img, url, W, H, init, seed, isNew, submitLabel, onSubmi
   const btn = h('button', { class: 'btn primary big' }, submitLabel);
   put(el, 
     h('div', { class: 'card' },
-      h('p', { class: 'muted small' }, `Aufnahme: ${fmtDateTime(init.taken_at)}${init.device ? ` · ${init.device}` : ''}${isNew ? ` · Gruppe: ${SPLIT_LABEL[init.split]}` : ''}`),
+      h('p', { class: 'muted small' }, `Aufnahme: ${fmtDateTime(init.taken_at)}${init.device ? ` · ${init.device}` : ''}`),
       seed ? h('p', { class: 'hint small' }, `Startdaten für dieses Foto gefunden: Ecken und Maßstab${seed.premarks && seed.premarks.length ? ` sowie ${seed.premarks.length} Vormarkierungen aus dem Schrauben-Foto` : ''} werden übernommen.`) : null,
       h('div', { class: 'grid2' }, h('label', {}, 'Volk', f.colony), h('label', {}, 'Standort', f.site)),
       h('div', { class: 'grid2' }, h('label', {}, 'Windel eingelegt', f.ins), h('label', {}, 'Windel entnommen', f.rem)),
@@ -209,7 +207,7 @@ function imageForm(el, { img, url, W, H, init, seed, isNew, submitLabel, onSubmi
         windel_w_mm: f.ww.value ? +f.ww.value : null, windel_l_mm: f.wl.value ? +f.wl.value : null, width_dir: dir.value,
         roi, px_per_mm: Math.round(ppm * 1e4) / 1e4,
         scale_source: f.wl.value ? 'Windelbreite und -länge' : 'Windelbreite',
-        split: init.split, note: f.note.value.trim() || null,
+        note: f.note.value.trim() || null,
       }, progress);
     } catch (e) { console.error(e); toast(e.message, 'error', 7000); status.textContent = ''; btn.disabled = false; }
   };
