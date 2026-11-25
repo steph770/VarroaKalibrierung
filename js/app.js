@@ -171,6 +171,7 @@ async function detailView(el, id) {
   const lm = modelAt(rec.created_at);
   const appCount = lm ? countWithModel(lm.model, rec) : null;
   const viewer = h('div', { class: 'viewer' });
+  const sizeEl = h('span', {}, '…'), cropEl = h('span', {}, '…');
   const pts = (rec.annotations && rec.annotations.points) || [];
   const days = rec.inserted_at && rec.removed_at ? (new Date(rec.removed_at) - new Date(rec.inserted_at)) / 864e5 : null;
   const canReview = rec.status !== 'bestaetigt' || admin || rec.reviewed_by === me.id;
@@ -185,7 +186,9 @@ async function detailView(el, id) {
         ['Einlage', `${fmtDateTime(rec.inserted_at)} bis ${fmtDateTime(rec.removed_at)}${days ? ` (${days.toFixed(1)} Tage)` : ''}`],
         ['Windel', rec.windel_w_mm ? `${rec.windel_w_mm} mm breit${rec.windel_l_mm ? ` × ${rec.windel_l_mm} mm lang` : ''}` : '–'],
         ['Auflösung Foto', `${rec.width} × ${rec.height} px (${(rec.width * rec.height / 1e6).toFixed(1).replace('.', ',')} MP)`],
+        ['Dateigröße Foto', sizeEl],
         ['Auflösung Windelfläche', roiRes(rec)],
+        ['Dateigröße Windelfläche', cropEl],
         ['Prüfausschnitt', `7 × 7 mm = ${Math.round(7 * rec.px_per_mm)} × ${Math.round(7 * rec.px_per_mm)} px · eine Milbe ≈ ${Math.round(1.6 * rec.px_per_mm)} px breit`],
         ['Maßstab', `${(+rec.px_per_mm).toFixed(2)} px/mm${rec.scale_source ? ` (${rec.scale_source})` : ''}`],
         ['Kandidaten', rec.n_candidates ?? '–'],
@@ -207,6 +210,9 @@ async function detailView(el, id) {
     ),
   );
   const blob = await state.store.getBlob(rec.file_path);
+  sizeEl.textContent = mb(blob.size);
+  const share = roiShare(rec);
+  cropEl.textContent = share ? `ca. ${mb(blob.size * share)} (anteilig geschätzt; gespeichert wird das ganze Foto, ausgewertet nur die Windelfläche)` : '–';
   const { url } = await loadImage(blob);
   const r = 1.3 * rec.px_per_mm;
   const zv = new ZoomView(viewer, {
@@ -220,6 +226,15 @@ async function detailView(el, id) {
     },
   });
   return () => { zv.destroy(); URL.revokeObjectURL(url); };
+}
+
+const mb = b => `${(b / 1048576).toFixed(2).replace('.', ',')} MB`;
+
+function roiShare(rec) {
+  if (!rec.roi || rec.roi.length !== 4) return null;
+  let s = 0; const p = rec.roi;
+  for (let i = 0; i < 4; i++) { const [x1, y1] = p[i], [x2, y2] = p[(i + 1) % 4]; s += x1 * y2 - x2 * y1; }
+  return Math.min(1, Math.abs(s) / 2 / (rec.width * rec.height));
 }
 
 function roiRes(rec) {
