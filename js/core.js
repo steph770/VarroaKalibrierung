@@ -10,8 +10,7 @@ export const state = { store: null, models: [], seed: null, members: [] };
 export function storeSettings() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem('vk-settings') || '{}'); } catch { /* leer */ }
-  const url = CONFIG.supabaseUrl || saved.url || '';
-  const key = CONFIG.supabaseAnonKey || saved.key || '';
+  const url = (CONFIG.supabaseUrl || saved.url || '').trim().replace(/\/(rest|auth|storage)\/v1\/?$/, '').replace(/\/+$/, '');
   const mode = saved.mode || (url && key ? 'supabase' : null);
   return { mode, url, key, fromConfig: !!(CONFIG.supabaseUrl && CONFIG.supabaseAnonKey) };
 }
